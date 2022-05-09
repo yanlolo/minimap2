@@ -9,6 +9,9 @@
 #include "mmpriv.h"
 #include "bseq.h"
 #include "khash.h"
+#include <time.h>
+
+extern double mm_cal, mm_fetch, mm_hit_cnt;
 
 struct mm_tbuf_s {
 	void *km;
@@ -252,7 +255,12 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 	hash ^= __ac_Wang_hash(qlen_sum) + __ac_Wang_hash(opt->seed);
 	hash  = __ac_Wang_hash(hash);
 
-	collect_minimizers(b->km, opt, mi, n_segs, qlens, seqs, &mv);
+    double begin = realtime();
+    collect_minimizers(b->km, opt, mi, n_segs, qlens, seqs, &mv);
+    double end = realtime();
+    mm_cal += (end - begin);
+
+    begin = realtime();
 	if (opt->q_occ_frac > 0.0f) mm_seed_mz_flt(b->km, &mv, opt->mid_occ, opt->q_occ_frac);
 	if (opt->flag & MM_F_HEAP_SORT) a = collect_seed_hits_heap(b->km, opt, opt->mid_occ, mi, qname, &mv, qlen_sum, &n_a, &rep_len, &n_mini_pos, &mini_pos);
 	else a = collect_seed_hits(b->km, opt, opt->mid_occ, mi, qname, &mv, qlen_sum, &n_a, &rep_len, &n_mini_pos, &mini_pos);
@@ -263,8 +271,12 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 			fprintf(stderr, "SD\t%s\t%d\t%c\t%d\t%d\t%d\n", mi->seq[a[i].x<<1>>33].name, (int32_t)a[i].x, "+-"[a[i].x>>63], (int32_t)a[i].y, (int32_t)(a[i].y>>32&0xff),
 					i == 0? 0 : ((int32_t)a[i].y - (int32_t)a[i-1].y) - ((int32_t)a[i].x - (int32_t)a[i-1].x));
 	}
+    end = realtime();
+    mm_fetch += (end - begin) ;
 
-	// set max chaining gap on the query and the reference sequence
+    begin = realtime();
+
+  // set max chaining gap on the query and the reference sequence
 	if (is_sr)
 		max_chain_gap_qry = qlen_sum > opt->max_gap? qlen_sum : opt->max_gap;
 	else max_chain_gap_qry = opt->max_gap;
@@ -376,6 +388,9 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 			b->km = km_init();
 		}
 	}
+
+  end = realtime();
+  mm_hit_cnt += (end - begin);
 }
 
 mm_reg1_t *mm_map(const mm_idx_t *mi, int qlen, const char *seq, int *n_regs, mm_tbuf_t *b, const mm_mapopt_t *opt, const char *qname)
