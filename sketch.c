@@ -104,14 +104,12 @@ void mm_sketch(void *km, const char *str, int len, int w, int k, uint32_t rid, i
 				if (tq.count > k) kmer_span -= tq_shift(&tq);
 			} else kmer_span = l + 1 < k? l + 1 : k;
 			kmer[0] = (kmer[0] << 2 | c) & mask;           // forward k-mer
-//			kmer[1] = (kmer[1] >> 2) | (3ULL^c) << shift1; // reverse k-mer
-//			if (kmer[0] == kmer[1]) continue; // skip "symmetric k-mers" as we don't know it strand
-//			z = kmer[0] < kmer[1]? 0 : 1; // strand
-			z = 0;
+			kmer[1] = (kmer[1] >> 2) | (3ULL^c) << shift1; // reverse k-mer
+			if (kmer[0] == kmer[1]) continue; // skip "symmetric k-mers" as we don't know it strand
+			z = kmer[0] < kmer[1]? 0 : 1; // strand
             ++l;
 			if (l >= k && kmer_span < 256) {
-//				info.x = hash64(kmer[z], mask) << 8 | kmer_span;
-                info.x = (kmer[z] & mask) << 8 | kmer_span;
+				info.x = hash64(kmer[z], mask) << 8 | kmer_span;
                 info.y = (uint64_t)rid<<32 | (uint32_t)i<<1 | z;
 			}
 		} else l = 0, tq.count = tq.front = 0, kmer_span = 0;
